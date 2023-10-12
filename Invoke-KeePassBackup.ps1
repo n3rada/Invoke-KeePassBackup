@@ -133,8 +133,7 @@ function Invoke-KeePassBackup {
 
                 $KeePassXML.Save($KeePassXMLPath)
 
-                Write-Host "Setup Complete!"
-                Write-Host "To trigger the KeePass backup and upload, open your KeePass with master password."
+                Write-Host "Configuration complete. The trigger will go off as soon as it is opened."
             }
         }
 

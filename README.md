@@ -26,8 +26,7 @@ KeePass version: 2.51.1.0
 --------------- Adding an export trigger on config file: C:\Users\noah\AppData\Roaming\KeePass\KeePass.config.xml
 Backup of current config file done at: C:\Users\noah\AppData\Roaming\KeePass\KeePass.config.backup.xml
 Export location: C:\Users\noah\AppData\Local\Temp\KeePassBackup.csv
-Setup Complete!
-To trigger the KeePass backup and upload, open your KeePass with master password.
+Configuration complete. The trigger will go off as soon as it is opened.
 --------------- Scanning for KeePass databases on ITWR02
 Found KeePass database at: C:\Users\noah\Documents\Database.kdbx
 Uploaded noah@ITWR02-20231012-Database.kdbx successfully!
