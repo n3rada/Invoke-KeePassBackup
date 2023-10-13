@@ -1,5 +1,7 @@
 # Invoke-KeePassBackup
-This PowerShell script has been crafted to streamline the process of transmitting KeePass databases to a designated endpoint. Conceived as an indispensable tool for your penetration testing toolkit, it aims to facilitate the exfiltration of target databases, paving the way for subsequent exploitation. Central to its design is the objective to incorporate comprehensive KeePass tests, thereby eliminating manual, time-intensive tasks. 🕊️
+This PowerShell script has been crafted to streamline the process of transmitting KeePass databases to a designated endpoint. Conceived as an indispensable tool for your penetration testing toolkit, it aims to facilitate the exfiltration of target databases, paving the way for subsequent exploitation. 🕊️
+
+The goal is to incorporate comprehensive KeePass tests, thereby eliminating manual, time-consuming commands.
 
 ## Features
 - Automatically locates the KeePass executable and ascertains its version.
