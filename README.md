@@ -5,7 +5,7 @@ The goal is to incorporate comprehensive KeePass tests, thereby eliminating manu
 
 ## Features
 - Automatically locates the KeePass executable and ascertains its version.
-- Adds an export trigger to the KeePass configuration if KeePass version is below 2.53.
+- Adds an export trigger to the KeePass configuration if KeePass version is below 2.53 (a.k.a [`CVE-2023-24055`](https://nvd.nist.gov/vuln/detail/CVE-2023-24055).
 - Backs up the current KeePass configuration before making changes.
 - Scours all KeePass databases on the computer and uploads them to a given endpoint.
 - Uses GZip compression for efficient backup size.
