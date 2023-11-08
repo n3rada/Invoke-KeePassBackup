@@ -34,7 +34,7 @@ Found KeePass database at: C:\Users\noah\Documents\Database.kdbx
 Uploaded noah@ITWR02-20231012-Database.kdbx successfully!
 ```
 
-The reception endpoint could resemble this FastAPI Python3 code snippet:
+The reception point could look like this FastAPI Python3 code snippet:
 ```python
 @app.post("/u")
 async def upload_file(x_file_name: str = Header(...), data: str = Body(...)):
